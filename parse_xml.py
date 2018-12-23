@@ -2,6 +2,8 @@ import csv
 import requests
 import xml.etree.ElementTree as ElementTree
 
+tolerance = .25
+
 xml_file = 'yields.xml'
 csv_file = 'yields.csv'
 
@@ -21,8 +23,7 @@ headers = [
     #'30YEAR',
 ]
 
-maturities = set(headers[1:]) # i.e. everything except 'Date'
-
+maturities = headers[1:] # i.e. everything except 'Date'
 
 def strip_prefix(string):
     return string.split('}')[1]
@@ -76,19 +77,32 @@ def parseXML(xmlfile):
         date = parse_date(properties[1].text)
         yield_curve['DATE'] = date
 
-        # parse yield curve
-        for yield_entry in properties:
+        # only include 1st of each month
+        if date.endswith('01'):
 
-            tag = strip_prefix(yield_entry.tag)
-            maturity = parse_maturity(tag)
+            # parse yield curve
+            for yield_entry in properties:
 
-            if maturity in maturities:
-                yield_val = parse_yield(yield_entry.text)
-                yield_curve[maturity] = yield_val
+                tag = strip_prefix(yield_entry.tag)
+                maturity = parse_maturity(tag)
 
-        yield_curves.append(yield_curve)
+                if maturity in maturities:
+                    yield_val = parse_yield(yield_entry.text)
+                    yield_curve[maturity] = float(yield_val)
 
-    return yield_curves
+            # only add curves with an inversion
+            if hasInversion(yield_curve):
+                yield_curves.append(yield_curve)
+
+    return sorted(yield_curves, key=lambda curve: curve['DATE'])
+
+def hasInversion(yield_curve):
+    num_maturities = len(maturities)
+    for i in range(num_maturities):
+        for j in range(i, num_maturities):
+            if yield_curve[maturities[i]] > yield_curve[maturities[j]] + tolerance:
+                return True
+    return False
 
 def savetoCSV(yield_curves, filename):
 
