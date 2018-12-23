@@ -1,5 +1,5 @@
-import csv 
-import requests 
+import csv
+import requests
 import xml.etree.ElementTree as ElementTree
 
 xml_file = 'yields.xml'
@@ -39,25 +39,25 @@ def parse_maturity(maturity):
 def parse_yield(yield_val):
     return float(yield_val) if yield_val else None
 
-def loadRSS(): 
+def loadRSS():
 
-    # url of rss feed 
+    # url of rss feed
     url = 'http://data.treasury.gov/feed.svc/DailyTreasuryYieldCurveRateData'
 
-    # creating HTTP response object from given url 
-    response = requests.get(url) 
+    # creating HTTP response object from given url
+    response = requests.get(url)
 
-    # saving the xml file 
-    with open(xml_file, 'wb') as f: 
-        f.write(response.content) 
-        
+    # saving the xml file
+    with open(xml_file, 'wb') as f:
+        f.write(response.content)
 
-def parseXML(xmlfile): 
+
+def parseXML(xmlfile):
 
     yield_curves = []
 
-    # create element tree object 
-    tree = ElementTree.parse(xmlfile) 
+    # create element tree object
+    tree = ElementTree.parse(xmlfile)
 
     root = tree.getroot()
     for entry in root:
@@ -89,59 +89,34 @@ def parseXML(xmlfile):
         yield_curves.append(yield_curve)
 
     return yield_curves
-    # # create empty list for news items 
-    # newsitems = [] 
 
-    # # iterate news items 
-    # for item in root.findall('./channel/item'): 
+def savetoCSV(yield_curves, filename):
 
+    # writing to csv file
+    with open(filename, 'w') as csvfile:
 
-    #   # empty news dictionary 
-    #   news = {} 
+        # creating a csv dict writer object
+        writer = csv.DictWriter(csvfile, fieldnames = headers)
 
-    #   # iterate child elements of item 
-    #   for child in item: 
+        # writing headers (field names)
+        writer.writeheader()
 
-    #       # special checking for namespace object content:media 
-    #       if child.tag == '{http://search.yahoo.com/mrss/}content': 
-    #           news['media'] = child.attrib['url'] 
-    #       else: 
-    #           news[child.tag] = child.text.encode('utf8') 
-
-    #   # append news dictionary to news items list 
-    #   newsitems.append(news) 
-    
-    # # return news items list 
-    # return newsitems 
+        # writing data rows
+        writer.writerows(yield_curves)
 
 
-def savetoCSV(yield_curves, filename): 
+def main():
+    # load rss from web to update existing xml file
+    loadRSS()
 
-    # writing to csv file 
-    with open(filename, 'w') as csvfile: 
+    # parse xml file
+    newsitems = parseXML(xml_file)
 
-        # creating a csv dict writer object 
-        writer = csv.DictWriter(csvfile, fieldnames = headers) 
+    # store news items in a csv file
+    savetoCSV(newsitems, csv_file)
 
-        # writing headers (field names) 
-        writer.writeheader() 
 
-        # writing data rows 
-        writer.writerows(yield_curves) 
+if __name__ == "__main__":
 
-    
-def main(): 
-    # load rss from web to update existing xml file 
-    loadRSS() 
-
-    # parse xml file 
-    newsitems = parseXML(xml_file) 
-
-    # store news items in a csv file 
-    savetoCSV(newsitems, csv_file) 
-    
-    
-if __name__ == "__main__": 
-
-    # calling main function 
-    main() 
+    # calling main function
+    main()
